@@ -627,7 +627,8 @@ export class CardDesigner {
 
 	private getCardShareData() : ICardData {
 		var answer: ICardData = {
-			CardJson: this.getCurrentCardEditorPayload()
+            CardJson: this.getCurrentCardEditorPayload(),
+            SampleData: this.getCurrentSampleDataEditorPayload()
 		};
 		return answer;
 	}
@@ -658,6 +659,9 @@ export class CardDesigner {
         try {
             this._sampleData = JSON.parse(this.getCurrentSampleDataEditorPayload());
             this.designerSurface.sampleData = this._sampleData;
+            if (this._shareDialog) {
+                this._shareDialog.sendUpdate(this.getCardShareData());
+            }
         }
         catch {
             // Swallow expression, the payload isn't a valid JSON document

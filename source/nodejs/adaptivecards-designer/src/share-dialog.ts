@@ -1,6 +1,6 @@
-import { CardHub, ICardData } from "./card-hub"
+import * as io from "socket.io-client";
+import { ICardData } from "./card-hub";
 import { QRCode } from "qrcode-generator-ts/js";
-import { CardDesigner } from "./card-designer";
 
 export class ShareDialog {
 
@@ -17,14 +17,16 @@ export class ShareDialog {
     private _manualJoinRespondIdElement: HTMLElement;
 	private _errorElement: HTMLElement;
 	
+	private _socket:SocketIOClient.Socket;
+	private readonly _socketUrl: string;
 	private _successfullyShared: boolean;
-	private _cardId?: string;
-	private _token?: string;
 
     constructor(
         attachedTo: HTMLElement) {
-
-        this.attachedTo = attachedTo;
+			
+		this.attachedTo = attachedTo;
+		this._socketUrl =
+            (<any>window).globalConfigs.shareUrl || "http://localhost:3000";
 
         this._modalElement = document.createElement("div");
         this._modalElement.style.display = "block";
@@ -102,26 +104,28 @@ export class ShareDialog {
 
     async shareAsync(cardData: ICardData) {
 		try {
-			var createCardResponse = await CardHub.createCardAsync(cardData);
-			var cardId = createCardResponse.CardId;
-			this._token = createCardResponse.Token;
+			this._socket = io(this._socketUrl);
+            this._socket.on("*.Error", err => this.fail(err));
+            this._socket.on("User.added", () => {
+                this._socket.emit("stream");
+            });
+            this._socket.on("Session.created", (sessionInfoString: string) => {
+				// Show QR code
+                var qr = new QRCode();
+                qr.setTypeNumber(4);
+                qr.addData(sessionInfoString);
+                qr.make();
+                var dataUrl = qr.toDataURL(35);
+                this._qrCodeElement.setAttribute("src", dataUrl);
+                this._qrCodeElement.style.display = "block";
+                this._progressElement.style.display = "none";
 
-			// Show QR code
-			var qr = new QRCode();
-			qr.setTypeNumber(4);
-			qr.addData(cardId);
-			qr.make();
-			var dataUrl = qr.toDataURL(35);
-			this._qrCodeElement.setAttribute("src", dataUrl);
-			this._qrCodeElement.style.display = "block";
-			this._progressElement.style.display = "none";
-
-			// And also the manual respond ID
-			this._manualJoinRespondLinkElement.setAttribute("href", "/receiver?remoteId=" + cardId);
-			this._manualJoinRespondIdElement.innerText = cardId;
-			this._manualJoinContainerElement.style.display = "block";
-			this._successfullyShared = true;
-			this._cardId = cardId;
+				this._manualJoinRespondIdElement.innerText = sessionInfoString;
+                this._manualJoinContainerElement.style.display = "block";
+                this._successfullyShared = true;
+                this._socket.emit("cardUpdate", cardData);
+            });
+            this._socket.emit("add");
 		} catch (err) {
 			this.fail(err);
 			throw err;
@@ -145,7 +149,7 @@ export class ShareDialog {
 	private async actuallySendUpdateAsync(cardData: ICardData) {
 		this._isUpdating = true;
 		try {
-			await CardHub.updateCardAsync(this._cardId!, this._token!, cardData);
+			this._socket.emit("cardUpdate", cardData);
 		} catch (err) {
 			console.log("Failed to send update: " + err);
 		}

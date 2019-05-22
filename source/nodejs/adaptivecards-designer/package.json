@@ -26,9 +26,11 @@
 		"adaptivecards-controls": "^0.1.7",
 		"clipboard": "^2.0.1",
 		"monaco-editor": "^0.15.6",
-		"qrcode-generator-ts": "0.0.4"
+		"qrcode-generator-ts": "0.0.4",
+		"socket.io-client": "^2.2.0"
 	},
 	"devDependencies": {
+		"@types/socket.io-client": "^1.4.32",
 		"browser-info": "^1.2.0",
 		"rimraf": "^2.6.2",
 		"typescript": "^3.2.2",

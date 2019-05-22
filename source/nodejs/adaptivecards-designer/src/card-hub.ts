@@ -1,5 +1,6 @@
 export interface ICardData {
-	CardJson: string;
+    CardJson: string;
+    SampleData: string;
 }
 
 export interface ICreateCardResponse {
